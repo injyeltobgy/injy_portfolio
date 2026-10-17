@@ -233,6 +233,10 @@ html[data-theme="dark"] .edu-card .edu-sub{color:var(--accent)}
 .addon svg{width:14px;height:14px}
 .plan .btn{padding:11px 28px;font-size:.9rem}
 /* ============================ TESTIMONIALS ============================ */
+.testi-list{display:grid;gap:22px;margin:0 auto 34px;max-width:1040px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.testi-list:empty{display:none}
+.testi-list .testi-card{max-width:none;width:100%;padding:30px 26px;margin:0}
+.testi-list .stars{margin-bottom:12px}
 .testi-card{max-width:720px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:38px 36px;box-shadow:0 14px 36px var(--shadow);text-align:center}
 .stars{color:#9B63D4;letter-spacing:5px;font-size:1.25rem;margin-bottom:18px}
 .testi-card blockquote{color:var(--muted);font-size:1.02rem;line-height:1.9}
@@ -1032,6 +1036,7 @@ html[lang="ar"] .in-phrase{font-weight:700;line-height:1.35}
       <div class="sec-bar"></div>
     </div>
     <p class="sec-line reveal" data-en="Worked with me? I'd love to hear from you." data-ar="اشتغلت معايا؟ يسعدني أسمع رأيك.">Worked with me? I'd love to hear from you.</p>
+    <div class="testi-list reveal d1" id="testiList"></div>
     <div class="plans-toggle reveal d1" id="testiToggle">
       <button class="pt-btn" id="testiOpen" type="button" aria-haspopup="dialog" aria-controls="testiModal" data-en-aria="Leave a testimonial" data-ar-aria="اترك توصية" aria-label="Leave a testimonial">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v6M9 10h6"/></svg>
@@ -1171,6 +1176,7 @@ html[lang="ar"] .in-phrase{font-weight:700;line-height:1.35}
         <div><label for="t-name" data-en="Your name" data-ar="اسمك">Your name</label><input id="t-name" name="name" type="text" required autocomplete="name"></div>
         <div><label for="t-role" data-en="Role / company (optional)" data-ar="وظيفتك / شركتك (اختياري)">Role / company (optional)</label><input id="t-role" name="role" type="text"></div>
       </div>
+      <div><label for="t-email" data-en="Your email (optional — so I can thank you)" data-ar="بريدك الإلكتروني (اختياري — عشان أشكرك)">Your email (optional — so I can thank you)</label><input id="t-email" name="email" type="email" autocomplete="email" placeholder="name@example.com"></div>
       <div><label data-en="Rating" data-ar="التقييم">Rating</label>
         <div class="star-input" id="starInput" role="radiogroup" aria-label="Rating">
           <button type="button" role="radio" aria-checked="false" data-v="1" class="on">★</button><button type="button" role="radio" aria-checked="false" data-v="2" class="on">★</button><button type="button" role="radio" aria-checked="false" data-v="3" class="on">★</button><button type="button" role="radio" aria-checked="false" data-v="4" class="on">★</button><button type="button" role="radio" aria-checked="true" data-v="5" class="on">★</button>
@@ -1323,7 +1329,11 @@ const SITE={
   ownerEmail:'enjy.ashraf.eltobgy@gmail.com',
   emailjs:{ publicKey:'DEcS_oYMJsYhdvshv', serviceId:'service_gmvzhuh', ownerTemplateId:'template_zt0bdtj', receiptTemplateId:'' },
   // paste your certificate / grant links here, in the same order as the cards (top to bottom)
-  certLinks:['','','','','']
+  certLinks:['','','','',''],
+  // APPROVED testimonials — paste the ready-made line from the email you receive, one per testimonial
+  testimonials:[
+    // {name:'Client Name',role:'Company / Role',rating:5,text:'Their words here.'},
+  ]
 };
 const PLANS={START:{price:0,label:'Free'},STANDARD:{price:10},PRO:{price:20},CUSTOM:{price:null}};
 const L=()=>document.documentElement.getAttribute('lang')==='ar';
@@ -1381,6 +1391,8 @@ document.getElementById('contactForm').addEventListener('submit',async e=>{
   const date=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
   const params={order_id:orderId,date,client_name:d.name,client_email:d.email,client_phone:d.phone||'—',
     plan:planKey||'General inquiry',price:priceTxt,subject:d.subject,message:d.message,to_email:SITE.ownerEmail,reply_to:d.email};
+  params.message=['FROM: '+d.name,'EMAIL (reply here): '+d.email,'PHONE: '+(d.phone||'—'),'PLAN: '+params.plan+' ('+priceTxt+')','ORDER: '+orderId+' · '+date,'','SUBJECT: '+d.subject,'','MESSAGE:',d.message].join('\n');
+  Object.assign(params,{name:d.name,from_name:d.name,user_name:d.name,email:d.email,from_email:d.email,user_email:d.email,phone:d.phone||'—',title:d.subject});
   if(!configured()){
     const body=`${d.message}\n\n— ${d.name}\n${d.email}\n${d.phone||''}\nPlan: ${params.plan} (${priceTxt})`;
     setStatus(st,'err',T('Online sending isn\'t set up yet — send it through: ','الإرسال المباشر لسه مش متفعّل — ابعتيها من: ')+fallbackLinks(d.subject,body));
@@ -1398,6 +1410,18 @@ document.getElementById('contactForm').addEventListener('submit',async e=>{
   }finally{btn.disabled=false}
 });
 
+/* approved testimonials */
+(function(){
+  const box=document.getElementById('testiList'); if(!box) return;
+  (SITE.testimonials||[]).forEach(t=>{
+    if(!t||!t.text) return;
+    const n=Math.max(1,Math.min(5,+t.rating||5));
+    const c=document.createElement('div'); c.className='testi-card';
+    c.innerHTML='<div class="stars" aria-label="'+n+'/5">'+'★'.repeat(n)+'☆'.repeat(5-n)+'</div><blockquote>“'+esc(t.text)+'”</blockquote><div class="testi-div"></div><div class="testi-who"><div><b>'+esc(t.name||'')+'</b>'+(t.role?'<span>'+esc(t.role)+'</span>':'')+'</div></div>';
+    box.appendChild(c);
+  });
+})();
+
 /* testimonial form */
 (function(){
   let rating=5;const si=document.getElementById('starInput');
@@ -1407,8 +1431,12 @@ document.getElementById('contactForm').addEventListener('submit',async e=>{
     e.preventDefault();const f=e.target,st=document.getElementById('testiStatus'),btn=f.querySelector('button[type=submit]');
     if(!f.checkValidity()){f.reportValidity();return}
     const d=Object.fromEntries(new FormData(f));
-    const params={order_id:'TESTIMONIAL',date:new Date().toDateString(),client_name:d.name,client_email:SITE.ownerEmail,client_phone:'—',plan:'—',price:'—',
-      subject:'New testimonial from '+d.name+' ('+rating+'/5)',message:d.text+'\n\nRole: '+(d.role||'—')+'\nRating: '+rating+'/5',to_email:SITE.ownerEmail,reply_to:SITE.ownerEmail};
+    const em=(d.email||'').trim();
+    const snippet="{name:'"+d.name.replace(/'/g,"\\'")+"',role:'"+(d.role||'').replace(/'/g,"\\'")+"',rating:"+rating+",text:'"+d.text.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\s*\n\s*/g,' ')+"'},";
+    const msg=['NEW TESTIMONIAL','','FROM: '+d.name,'ROLE / COMPANY: '+(d.role||'—'),'EMAIL (reply here): '+(em||'not provided'),'RATING: '+rating+'/5','','TESTIMONIAL:',d.text,'','--- To publish it on the site, paste this line inside testimonials:[ ] ---',snippet].join('\n');
+    const params={order_id:'TESTIMONIAL',date:new Date().toDateString(),client_name:d.name,client_email:em||'not provided',client_phone:'—',plan:'Testimonial',price:'—',
+      subject:'New testimonial from '+d.name+' ('+rating+'/5)',message:msg,to_email:SITE.ownerEmail,reply_to:em||SITE.ownerEmail,
+      name:d.name,from_name:d.name,user_name:d.name,email:em||'not provided',from_email:em||'not provided',user_email:em||'not provided',title:'New testimonial from '+d.name};
     if(!configured()){setStatus(st,'err',T('Online sending isn\'t set up yet — send it through: ','الإرسال المباشر لسه مش متفعّل — ابعتيها من: ')+fallbackLinks(params.subject,params.message));return}
     btn.disabled=true;setStatus(st,'',T('Sending…','جاري الإرسال…'));
     try{await emailjs(SITE.emailjs.ownerTemplateId,params);setStatus(st,'ok',T('Thank you! Your testimonial was sent for review.','شكرًا لك! توصيتك اتبعتت للمراجعة.'));f.reset()}
